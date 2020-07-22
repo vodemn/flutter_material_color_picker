@@ -150,6 +150,7 @@ class _MaterialColorPickerState extends State<MaterialColorPicker> {
     setState(() {
       _mainColor = color;
       _shadeColor = shadeColor;
+      _isMainSelection = false;
     });
     if (widget.onColorChange != null) widget.onColorChange(shadeColor);
   }
