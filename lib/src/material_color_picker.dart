@@ -5,32 +5,22 @@ import 'package:flutter/material.dart';
 class MaterialColorPicker extends StatefulWidget {
   final Color selectedColor;
   final ValueChanged<Color> onColorChange;
-  final ValueChanged<ColorSwatch> onMainColorChange;
-  final List<ColorSwatch> colors;
   final bool shrinkWrap;
   final ScrollPhysics physics;
-  final bool allowShades;
-  final bool onlyShadeSelection;
   final double circleSize;
   final double spacing;
   final IconData iconSelected;
-  final VoidCallback onBack;
   final double elevation;
 
   const MaterialColorPicker({
     Key key,
     this.selectedColor,
     this.onColorChange,
-    this.onMainColorChange,
-    this.colors,
     this.shrinkWrap = false,
     this.physics,
-    this.allowShades = true,
-    this.onlyShadeSelection = false,
     this.iconSelected = Icons.check,
     this.circleSize = 45.0,
     this.spacing = 9.0,
-    this.onBack,
     this.elevation,
   }) : super(key: key);
 
@@ -45,7 +35,7 @@ class _MaterialColorPickerState extends State<MaterialColorPicker> {
 
   ColorSwatch _mainColor;
   Color _shadeColor;
-  bool _isMainSelection;
+  bool _isMainSelection = true;
 
   @override
   void initState() {
@@ -60,21 +50,15 @@ class _MaterialColorPickerState extends State<MaterialColorPicker> {
   }
 
   void _initSelectedValue() {
-    if (widget.colors != null) _colors = widget.colors;
-
     Color shadeColor = widget.selectedColor ?? _defaultValue;
     ColorSwatch mainColor = _findMainColor(shadeColor);
-
     if (mainColor == null) {
       mainColor = _colors[0];
       shadeColor = mainColor[500] ?? mainColor[400];
-    }
-
-    setState(() {
+    } else {
       _mainColor = mainColor;
       _shadeColor = shadeColor;
-      _isMainSelection = true;
-    });
+    }
   }
 
   ColorSwatch _findMainColor(Color shadeColor) {
@@ -93,31 +77,27 @@ class _MaterialColorPickerState extends State<MaterialColorPicker> {
     return false;
   }
 
-  void _onMainColorSelected(ColorSwatch color) {
-    var isShadeOfMain = _isShadeOfMain(color, _shadeColor);
-    final shadeColor = isShadeOfMain ? _shadeColor : (color[500] ?? color[400]);
+  @override
+  Widget build(BuildContext context) {
+    final listChildren = _isMainSelection ? _buildListMainColor(_colors) : _buildListShadesColor(_mainColor);
 
-    setState(() {
-      _mainColor = color;
-      _shadeColor = shadeColor;
-      _isMainSelection = false;
-    });
-    if (widget.onMainColorChange != null) widget.onMainColorChange(color);
-    if (widget.onlyShadeSelection && !_isMainSelection) {
-      return;
-    }
-    if (widget.allowShades && widget.onColorChange != null)
-      widget.onColorChange(shadeColor);
-  }
+    // Size of dialog
+    final double width = MediaQuery.of(context).size.width * .80;
+    // Number of circle per line, depend on width and circleSize
+    final int nbrCircleLine = width ~/ (widget.circleSize + widget.spacing);
 
-  void _onShadeColorSelected(Color color) {
-    setState(() => _shadeColor = color);
-    if (widget.onColorChange != null) widget.onColorChange(color);
-  }
-
-  void _onBack() {
-    setState(() => _isMainSelection = true);
-    if (widget.onBack != null) widget.onBack();
+    return Container(
+      width: width,
+      child: GridView.count(
+        shrinkWrap: widget.shrinkWrap,
+        physics: widget.physics,
+        padding: const EdgeInsets.all(16.0),
+        crossAxisSpacing: widget.spacing,
+        mainAxisSpacing: widget.spacing,
+        crossAxisCount: nbrCircleLine,
+        children: listChildren,
+      ),
+    );
   }
 
   List<Widget> _buildListMainColor(List<ColorSwatch> colors) {
@@ -151,11 +131,6 @@ class _MaterialColorPickerState extends State<MaterialColorPicker> {
 
   List<Widget> _buildListShadesColor(ColorSwatch color) {
     return [
-      IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: _onBack,
-        padding: const EdgeInsets.only(right: 2.0),
-      ),
       for (final color in _getMaterialColorShades(color))
         CircleColor(
           color: color,
@@ -167,29 +142,20 @@ class _MaterialColorPickerState extends State<MaterialColorPicker> {
         ),
     ];
   }
+  
+  void _onMainColorSelected(ColorSwatch color) {
+    var isShadeOfMain = _isShadeOfMain(color, _shadeColor);
+    final shadeColor = isShadeOfMain ? _shadeColor : (color[500] ?? color[400]);
 
-  @override
-  Widget build(BuildContext context) {
-    final listChildren = _isMainSelection || !widget.allowShades
-        ? _buildListMainColor(_colors)
-        : _buildListShadesColor(_mainColor);
+    setState(() {
+      _mainColor = color;
+      _shadeColor = shadeColor;
+    });
+    if (widget.onColorChange != null) widget.onColorChange(shadeColor);
+  }
 
-    // Size of dialog
-    final double width = MediaQuery.of(context).size.width * .80;
-    // Number of circle per line, depend on width and circleSize
-    final int nbrCircleLine = width ~/ (widget.circleSize + widget.spacing);
-
-    return Container(
-      width: width,
-      child: GridView.count(
-        shrinkWrap: widget.shrinkWrap,
-        physics: widget.physics,
-        padding: const EdgeInsets.all(16.0),
-        crossAxisSpacing: widget.spacing,
-        mainAxisSpacing: widget.spacing,
-        crossAxisCount: nbrCircleLine,
-        children: listChildren,
-      ),
-    );
+  void _onShadeColorSelected(Color color) {
+    setState(() => _shadeColor = color);
+    if (widget.onColorChange != null) widget.onColorChange(color);
   }
 }
